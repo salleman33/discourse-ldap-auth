@@ -1,18 +1,21 @@
+# frozen_string_literal: true
 # name:ldap
 # about: A plugin to provide ldap authentication.
-# version: 0.6.1
+# version: 0.8.0
 # authors: Jon Bake <jonmbake@gmail.com>
 
 enabled_site_setting :ldap_enabled
 
 gem 'pyu-ruby-sasl', '0.0.3.3', require: false
-gem 'rubyntlm', '0.6.5', require: false
-gem 'net-ldap', '0.20.0'
-gem 'omniauth-ldap', '2.3.3'
+gem 'rubyntlm', '0.3.4', require: false
+gem 'net-ldap', '0.18.0'
 
 require 'yaml'
+require_relative 'lib/omniauth-ldap/adaptor'
+require_relative 'lib/omniauth/strategies/ldap'
 require_relative 'lib/ldap_user'
 
+# rubocop:disable Discourse/Plugins/NoMonkeyPatching
 class ::LDAPAuthenticator < ::Auth::Authenticator
   def name
     'ldap'
@@ -26,7 +29,7 @@ class ::LDAPAuthenticator < ::Auth::Authenticator
     if SiteSetting.ldap_email != 'email'
       auth_options.info[:email] = auth_options.extra[:raw_info][SiteSetting.ldap_email].first()
     end
-    return auth_result(auth_options.info)
+    auth_result(auth_options.info)
   end
 
   def register_middleware(omniauth)
@@ -53,7 +56,7 @@ class ::LDAPAuthenticator < ::Auth::Authenticator
     case SiteSetting.ldap_user_create_mode
       when 'none'
         ldap_user = LDAPUser.new(auth_info)
-        return ldap_user.account_exists? ? ldap_user.auth_result : fail_auth('User account does not exist.')
+        ldap_user.account_exists? ? ldap_user.auth_result : fail_auth('User account does not exist.')
       when 'list'
         user_descriptions = load_user_descriptions
         return fail_auth('List of users must be provided when ldap_user_create_mode setting is set to \'list\'.') if user_descriptions.nil?
@@ -62,11 +65,11 @@ class ::LDAPAuthenticator < ::Auth::Authenticator
         return fail_auth('User with email is not listed in LDAP user list.') if match.nil?
         match[:nickname] = match[:username] || auth_info[:nickname]
         match[:name] = match[:name] || auth_info[:name]
-        return LDAPUser.new(match).auth_result
+        LDAPUser.new(match).auth_result
       when 'auto'
-        return LDAPUser.new(auth_info).auth_result
+        LDAPUser.new(auth_info).auth_result
       else
-        return fail_auth('Invalid option for ldap_user_create_mode setting.')
+        fail_auth('Invalid option for ldap_user_create_mode setting.')
     end
   end
   def fail_auth(reason)
@@ -78,9 +81,10 @@ class ::LDAPAuthenticator < ::Auth::Authenticator
   def load_user_descriptions
     file_path = "#{File.expand_path(File.dirname(__FILE__))}/ldap_users.yml"
     return nil unless File.exist?(file_path)
-    return YAML.load_file(file_path)
+    YAML.load_file(file_path)
   end
 end
+# rubocop:enable Discourse/Plugins/NoMonkeyPatching
 
 auth_provider authenticator: LDAPAuthenticator.new
 
