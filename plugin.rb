@@ -6,8 +6,8 @@
 enabled_site_setting :ldap_enabled
 
 gem 'pyu-ruby-sasl', '0.0.3.3', require: false
-gem 'rubyntlm', '0.3.4', require: false
-gem 'net-ldap', '0.19.0'
+gem 'rubyntlm', '0.6.5', require: false
+gem 'net-ldap', '0.20.0'
 gem 'omniauth-ldap', '2.3.3'
 
 require 'yaml'
